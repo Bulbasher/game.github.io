@@ -1,4 +1,4 @@
-let status = "waiting";
+let state = "waiting";
 let lastTimestamp;
 let manX;
 let manY;
@@ -140,8 +140,8 @@ function resetGame() {
     restartButton.style.display = "none";
     scoreElement.innerText = score;
     platforms = [{ x: 50, w: 50 }];
-    santaX = platforms[0].x + platforms[0].w - config.manDistanceFromEdge;
-    santaY = 0;
+    manX = platforms[0].x + platforms[0].w - config.manDistanceFromEdge;
+    manY = 0;
     sticks = [{ x: platforms[0].x + platforms[0].w, length: 0, rotation: 0 }];
     trees = [];
     clouds = [];
@@ -188,7 +188,7 @@ function generateTree() {
         minimumGap +
         Math.floor(Math.random() * (maximumGap - minimumGap));
 
-    const treeColors = [colours.lightHill, colours.medBg, colours.medHill];
+    const treeColors = [colours.medBg, colours.medBg, colours.medBg];
     const color = treeColors[Math.floor(Math.random() * 3)];
 
     trees.push({ x, color });
@@ -270,7 +270,7 @@ function animate(timestamp) {
                         state = "transitioning";
                     }
                 } else {
-                    const maxSantaX =
+                    const maxmanX =
                         sticks.last().x + sticks.last().length + config.manWidth;
                     if (manX > maxmanX) {
                         manX = maxmanX;
@@ -509,7 +509,7 @@ function drawTree(x, color) {
     const treeCrownWidth = 30;
 
     // Draw trunk
-    ctx.fillStyle = colours.darkHill;
+    ctx.fillStyle = "#341A02";
     ctx.fillRect(-treeTrunkWidth / 2, -treeTrunkHeight,
         treeTrunkWidth,
         treeTrunkHeight
