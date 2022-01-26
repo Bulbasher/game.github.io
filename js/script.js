@@ -132,20 +132,78 @@ function resetGame() {
     draw();
 }
 
-//3д эффект для счета
-function addShadow(colour, depth) {
-    let shadow = "";
-    for (let i = 0; i <= depth; i++) {
-        shadow += `${i}px ${i}px 0 ${colour}`;
-        shadow += i < depth ? ", " : "";
-    }
-    return shadow;
+
+function generateCloud() {
+    const minimumGap = 60;
+    const maximumGap = 300;
+
+    const lastCloud = clouds[clouds.length - 1];
+    let furthestX = lastCloud ? lastCloud.x : 0;
+
+    const x =
+        furthestX +
+        minimumGap +
+        Math.floor(Math.random() * (maximumGap - minimumGap));
+
+    const y =
+        minimumGap +
+        Math.floor(Math.random() * (maximumGap - minimumGap)) -
+        window.innerHeight / 1.2;
+
+    const w = Math.floor(Math.random() * 15 + 15);
+    clouds.push({ x, y, w });
 }
 
-function createElementStyle(element, cssStyles = null, inner = null) {
-    const g = document.createElement(element);
-    if (cssStyles) g.style.cssText = cssStyles;
-    if (inner) g.innerHTML = inner;
-    document.body.appendChild(g);
-    return g;
+function generateTree() {
+    const minimumGap = 30;
+    const maximumGap = 150;
+
+    const lastTree = trees[trees.length - 1];
+    let furthestX = lastTree ? lastTree.x : 0;
+
+    const x =
+        furthestX +
+        minimumGap +
+        Math.floor(Math.random() * (maximumGap - minimumGap));
+
+    const treeColors = [colours.lightHill, colours.medBg, colours.medHill];
+    const color = treeColors[Math.floor(Math.random() * 3)];
+
+    trees.push({ x, color });
+}
+
+function generatePlatform() {
+    const minimumGap = 40;
+    const maximumGap = 200;
+    const minimumWidth = 20;
+    const maximumWidth = 100;
+
+    const lastPlatform = platforms[platforms.length - 1];
+    let furthestX = lastPlatform.x + lastPlatform.w;
+
+    const x =
+        furthestX +
+        minimumGap +
+        Math.floor(Math.random() * (maximumGap - minimumGap));
+    const w =
+        minimumWidth + Math.floor(Math.random() * (maximumWidth - minimumWidth));
+
+    platforms.push({ x, w });
+    //3д эффект для счета
+    function addShadow(colour, depth) {
+        let shadow = "";
+        for (let i = 0; i <= depth; i++) {
+            shadow += `${i}px ${i}px 0 ${colour}`;
+            shadow += i < depth ? ", " : "";
+        }
+        return shadow;
+    }
+
+    function createElementStyle(element, cssStyles = null, inner = null) {
+        const g = document.createElement(element);
+        if (cssStyles) g.style.cssText = cssStyles;
+        if (inner) g.innerHTML = inner;
+        document.body.appendChild(g);
+        return g;
+    }
 }
