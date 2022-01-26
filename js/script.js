@@ -57,9 +57,15 @@ const restartButton = createElementStyle(
     "NEW GAME"
 );
 
+// добавление анимации падающего снега
+for (let i = 0; i <= 50; i++) {
+    createElementStyle("i", `font-size: ${3 * Math.random()}em;left: ${    100 * Math.random()   }%; animation-delay: ${10 * Math.random()}s, ${2 * Math.random()}s`,
+        "."
+    );
+}
 canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
 
+canvas.height = window.innerHeight;
 const ctx = canvas.getContext("2d");
 Array.prototype.last = function() {
     return this[this.length - 1];
