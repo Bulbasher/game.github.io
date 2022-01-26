@@ -355,7 +355,7 @@ function draw() {
     );
 
     drawPlatforms();
-    drawSanta();
+    drawMan();
     drawSticks();
 
     ctx.restore();
@@ -402,6 +402,46 @@ function drawPlatforms() {
             );
         }
     });
+}
+
+//Рисуем человечка
+function drawMan() {
+    ctx.save();
+    ctx.fillStyle = "#793D05";
+    ctx.translate(
+        manX - config.manWidth / 2,
+        manY +
+        config.canvasHeight -
+        config.platformHeight -
+        config.manHeight / 2
+    );
+
+    ctx.fillRect(-config.manWidth / 2, -config.manHeight / 2,
+        config.manWidth,
+        config.manHeight - 4
+    );
+
+    const legDistance = 5;
+    ctx.beginPath();
+    ctx.arc(legDistance, 11.5, 3, 0, Math.PI * 2, false);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(-legDistance, 11.5, 3, 0, Math.PI * 2, false);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.fillStyle = colours.skin;
+    ctx.arc(5, -7, 3, 0, Math.PI * 2, false);
+    ctx.fill();
+
+    ctx.fillStyle = "white";
+    ctx.fillRect(-config.manWidth / 2, -12, config.manWidth, 3);
+
+    ctx.fillStyle = "black";
+    ctx.fillRect(-config.manWidth / 2, 2, config.manWidth, 2);
+
+
+    ctx.restore();
 }
 //Рисуем мостики
 function drawSticks() {
