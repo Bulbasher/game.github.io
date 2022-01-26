@@ -1,3 +1,26 @@
+let status = "waiting";
+let lastTimestamp;
+let manX;
+let manY;
+let sceneOffset;
+let score = 0;
+let platforms = [];
+let sticks = [];
+let trees = [];
+let clouds = [];
+
+const config = {
+    canvasWidth: 375,
+    canvasHeight: 375,
+    platformHeight: 100,
+    manDistanceFromEdge: 10,
+    paddingX: 100,
+    perfectAreaSize: 10,
+    backgroundSpeedMultiplier: 0.2,
+    speed: 4,
+    manWidth: 17,
+    manHeight: 30
+};
 const colours = {
     lightBg: "#020321",
     medBg: "#144A0B",
@@ -117,7 +140,7 @@ function resetGame() {
     restartButton.style.display = "none";
     scoreElement.innerText = score;
     platforms = [{ x: 50, w: 50 }];
-    santaX = platforms[0].x + platforms[0].w - config.santaDistanceFromEdge;
+    santaX = platforms[0].x + platforms[0].w - config.manDistanceFromEdge;
     santaY = 0;
     sticks = [{ x: platforms[0].x + platforms[0].w, length: 0, rotation: 0 }];
     trees = [];
@@ -131,7 +154,6 @@ function resetGame() {
 
     draw();
 }
-
 
 function generateCloud() {
     const minimumGap = 60;
@@ -189,21 +211,369 @@ function generatePlatform() {
         minimumWidth + Math.floor(Math.random() * (maximumWidth - minimumWidth));
 
     platforms.push({ x, w });
-    //3д эффект для счета
-    function addShadow(colour, depth) {
-        let shadow = "";
-        for (let i = 0; i <= depth; i++) {
-            shadow += `${i}px ${i}px 0 ${colour}`;
-            shadow += i < depth ? ", " : "";
-        }
-        return shadow;
+}
+
+function animate(timestamp) {
+    if (!lastTimestamp) {
+        lastTimestamp = timestamp;
+        window.requestAnimationFrame(animate);
+        return;
     }
 
-    function createElementStyle(element, cssStyles = null, inner = null) {
-        const g = document.createElement(element);
-        if (cssStyles) g.style.cssText = cssStyles;
-        if (inner) g.innerHTML = inner;
-        document.body.appendChild(g);
-        return g;
+    switch (state) {
+        case "waiting":
+            return;
+        case "stretching":
+            {
+                sticks.last().length += (timestamp - lastTimestamp) / config.speed;
+                break;
+            }
+        case "turning":
+            {
+                sticks.last().rotation += (timestamp - lastTimestamp) / config.speed;
+
+                if (sticks.last().rotation > 90) {
+                    sticks.last().rotation = 90;
+
+                    const [nextPlatform, perfectHit] = thePlatformTheStickHits();
+                    if (nextPlatform) {
+                        score += perfectHit ? 2 : 1;
+                        scoreElement.innerText = score;
+
+                        if (perfectHit) {
+                            perfectElement.style.opacity = 1;
+                            setTimeout(() => (perfectElement.style.opacity = 0), 1000);
+                        }
+
+                        generatePlatform();
+                        generateTree();
+                        generateTree();
+
+                        generateCloud();
+                        generateCloud();
+                    }
+
+                    state = "walking";
+                }
+                break;
+            }
+        case "walking":
+            {
+                manX += (timestamp - lastTimestamp) / config.speed;
+
+                const [nextPlatform] = thePlatformTheStickHits();
+                if (nextPlatform) {
+                    const maxmanX =
+                        nextPlatform.x + nextPlatform.w - config.manDistanceFromEdge;
+                    if (manX > maxmanX) {
+                        manX = maxmanX;
+                        state = "transitioning";
+                    }
+                } else {
+                    const maxSantaX =
+                        sticks.last().x + sticks.last().length + config.manWidth;
+                    if (manX > maxmanX) {
+                        manX = maxmanX;
+                        state = "falling";
+                    }
+                }
+                break;
+            }
+        case "transitioning":
+            {
+                sceneOffset += (timestamp - lastTimestamp) / (config.speed / 2);
+
+                const [nextPlatform] = thePlatformTheStickHits();
+                if (sceneOffset > nextPlatform.x + nextPlatform.w - config.paddingX) {
+                    sticks.push({
+                        x: nextPlatform.x + nextPlatform.w,
+                        length: 0,
+                        rotation: 0
+                    });
+                    state = "waiting";
+                }
+                break;
+            }
+        case "falling":
+            {
+                if (sticks.last().rotation < 180)
+                    sticks.last().rotation += (timestamp - lastTimestamp) / config.speed;
+
+                manY += (timestamp - lastTimestamp) / (config.speed / 2);
+                const maxmanY =
+                    config.platformHeight +
+                    100 +
+                    (window.innerHeight - config.canvasHeight) / 2;
+                if (manY > maxmanY) {
+                    restartButton.style.display = "block";
+                    return;
+                }
+                break;
+            }
+        default:
+            throw Error("Wrong status");
     }
+
+    draw();
+    window.requestAnimationFrame(animate);
+
+    lastTimestamp = timestamp;
 }
+
+function thePlatformTheStickHits() {
+    if (sticks.last().rotation != 90)
+        throw Error(`Stick is ${sticks.last().rotation}°`);
+    const stickFarX = sticks.last().x + sticks.last().length;
+
+    const platformTheStickHits = platforms.find(
+        (platform) => platform.x < stickFarX && stickFarX < platform.x + platform.w
+    );
+
+    if (
+        platformTheStickHits &&
+        platformTheStickHits.x +
+        platformTheStickHits.w / 2 -
+        config.perfectAreaSize / 2 <
+        stickFarX &&
+        stickFarX <
+        platformTheStickHits.x +
+        platformTheStickHits.w / 2 +
+        config.perfectAreaSize / 2
+    )
+        return [platformTheStickHits, true];
+
+    return [platformTheStickHits, false];
+}
+
+function draw() {
+    ctx.save();
+    ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+    drawBackground();
+    ctx.translate(
+        (window.innerWidth - config.canvasWidth) / 2 - sceneOffset,
+        (window.innerHeight - config.canvasHeight) / 2
+    );
+
+    drawPlatforms();
+    drawSanta();
+    drawSticks();
+
+    ctx.restore();
+}
+
+function drawPlatforms() {
+    platforms.forEach(({ x, w }) => {
+        let newX = x + 3;
+        let newW = w - 6;
+        let platformHeight =
+            config.platformHeight + (window.innerHeight - config.canvasHeight) / 2;
+        ctx.fillStyle = colours.platform;
+        ctx.fillRect(
+            newX,
+            config.canvasHeight - config.platformHeight,
+            newW,
+            platformHeight
+        );
+
+        for (let i = 1; i <= platformHeight / 10; ++i) {
+            let yGap = config.canvasHeight - config.platformHeight + i * 10;
+            ctx.moveTo(newX, yGap);
+            ctx.lineTo(newX + newW, yGap);
+            let xGap = i % 2 ? 0 : 10;
+            for (let j = 1; j < newW / 30; ++j) {
+                let x = j * 20 + xGap;
+                ctx.moveTo(newX + x, yGap);
+                ctx.lineTo(newX + x, yGap + 10);
+            }
+            ctx.strokeStyle = colours.platformTop;
+            ctx.stroke();
+        }
+
+        ctx.fillStyle = colours.platformTop;
+        ctx.fillRect(x, config.canvasHeight - config.platformHeight, w, 10);
+
+        if (sticks.last().x < x) {
+            ctx.fillStyle = "white";
+            ctx.fillRect(
+                x + w / 2 - config.perfectAreaSize / 2,
+                config.canvasHeight - config.platformHeight,
+                config.perfectAreaSize,
+                config.perfectAreaSize
+            );
+        }
+    });
+}
+//Рисуем мостики
+function drawSticks() {
+    sticks.forEach((stick) => {
+        ctx.save();
+
+        ctx.translate(stick.x, config.canvasHeight - config.platformHeight);
+        ctx.rotate((Math.PI / 180) * stick.rotation);
+
+        ctx.beginPath();
+        ctx.lineWidth = 4;
+        ctx.moveTo(0, 0);
+        ctx.lineTo(0, -stick.length);
+
+        ctx.strokeStyle = ctx.createPattern(createBridgePattern(), "repeat");
+        ctx.stroke();
+
+        ctx.restore();
+    });
+}
+
+function drawBackground() {
+    var gradient = ctx.createRadialGradient(
+        window.innerWidth / 2,
+        window.innerHeight / 2,
+        0,
+        window.innerHeight / 2,
+        window.innerWidth / 2,
+        window.innerWidth
+    );
+    gradient.addColorStop(0, colours.lightBg);
+    gradient.addColorStop(1, colours.darkBg);
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+
+    hills.forEach((hill) =>
+        drawHill(hill.baseHeight, hill.amplitude, hill.stretch, hill.colour)
+    );
+    trees.forEach((tree) => drawTree(tree.x, tree.color));
+    clouds.forEach((cloud) => drawCloud(cloud.x, cloud.y, cloud.w));
+}
+
+function drawHill(baseHeight, amplitude, stretch, color) {
+    ctx.beginPath();
+    ctx.moveTo(0, window.innerHeight);
+    ctx.lineTo(0, getHillY(0, baseHeight, amplitude, stretch));
+    for (let i = 0; i < window.innerWidth; i++) {
+        ctx.lineTo(i, getHillY(i, baseHeight, amplitude, stretch));
+    }
+    ctx.lineTo(window.innerWidth, window.innerHeight);
+    ctx.fillStyle = color;
+    ctx.fill();
+}
+
+function drawTree(x, color) {
+    ctx.save();
+    ctx.translate(
+        (-sceneOffset * config.backgroundSpeedMultiplier + x) * hills[1].stretch,
+        getTreeY(x, hills[1].baseHeight, hills[1].amplitude)
+    );
+
+    const treeTrunkHeight = 15;
+    const treeTrunkWidth = 10;
+    const treeCrownHeight = 60;
+    const treeCrownWidth = 30;
+
+    // Draw trunk
+    ctx.fillStyle = colours.darkHill;
+    ctx.fillRect(-treeTrunkWidth / 2, -treeTrunkHeight,
+        treeTrunkWidth,
+        treeTrunkHeight
+    );
+
+    // Draw crown
+    ctx.beginPath();
+
+    ctx.moveTo(-treeCrownWidth / 2, -treeTrunkHeight * 3);
+    ctx.lineTo(0, -(treeTrunkHeight + treeCrownHeight));
+    ctx.lineTo(treeCrownWidth / 2, -treeTrunkHeight * 3);
+
+    ctx.moveTo(-treeCrownWidth / 2, -treeTrunkHeight * 2);
+    ctx.lineTo(0, -(treeTrunkHeight / 2 + treeCrownHeight));
+    ctx.lineTo(treeCrownWidth / 2, -treeTrunkHeight * 2);
+
+    ctx.moveTo(-treeCrownWidth / 2, -treeTrunkHeight);
+    ctx.lineTo(0, -(treeTrunkHeight + treeCrownHeight / 2));
+    ctx.lineTo(treeCrownWidth / 2, -treeTrunkHeight);
+
+    ctx.fillStyle = color;
+    ctx.fill();
+
+    ctx.restore();
+}
+//Рисуем облаки
+function drawCloud(x, y, width) {
+    ctx.save();
+    ctx.translate(
+        (-sceneOffset * config.backgroundSpeedMultiplier + x) * hills[1].stretch,
+        getTreeY(x, hills[1].baseHeight, hills[1].amplitude)
+    );
+
+    height = width * 1.5;
+    ctx.beginPath();
+    ctx.arc(x, y, width, Math.PI * 0.5, Math.PI * 1.5);
+    ctx.arc(x + height, y - width, height, Math.PI * 1, Math.PI * 2);
+    ctx.arc(x + height * 2, y - width, height, Math.PI * 1.2, Math.PI);
+    ctx.arc(x + width * 3, y, width, Math.PI * 1.5, Math.PI * 0.5);
+    ctx.moveTo(x + width * 3, y + width);
+    ctx.lineTo(x, y + width);
+    ctx.fillStyle = "rgba(255, 255, 255, .3)";
+    ctx.fill();
+
+    ctx.restore();
+}
+
+function getHillY(windowX, baseHeight, amplitude, stretch) {
+    const sineBaseY = window.innerHeight - baseHeight;
+    return (
+        Math.sinus(
+            (sceneOffset * config.backgroundSpeedMultiplier + windowX) * stretch
+        ) *
+        amplitude +
+        sineBaseY
+    );
+}
+
+function getTreeY(x, baseHeight, amplitude) {
+    const sineBaseY = window.innerHeight - baseHeight;
+    return Math.sinus(x) * amplitude + sineBaseY;
+}
+
+//создание мостика
+function createBridgePattern() {
+    const patternCanvas = document.createElement("canvas");
+    const pctx = patternCanvas.getContext("2d");
+
+    const max = 15;
+    let i = 0;
+    let x = 0;
+    let z = 90;
+
+    while (i < max) {
+        pctx.beginPath();
+        pctx.moveTo(0, x);
+        pctx.lineTo(0, z);
+        pctx.lineWidth = 24;
+        pctx.strokeStyle = "#811700";
+        pctx.stroke();
+        x += 48;
+        z += 48;
+        i++;
+    }
+
+    return patternCanvas;
+}
+
+function createElementStyle(element, cssStyles = null, inner = null) {
+    const g = document.createElement(element);
+    if (cssStyles) g.style.cssText = cssStyles;
+    if (inner) g.innerHTML = inner;
+    document.body.appendChild(g);
+    return g;
+}
+
+function addShadow(colour, depth) {
+    let shadow = "";
+    for (let i = 0; i <= depth; i++) {
+        shadow += `${i}px ${i}px 0 ${colour}`;
+        shadow += i < depth ? ", " : "";
+    }
+    return shadow;
+}
+
+const funs = new Funs('light');
+funs.signature();
