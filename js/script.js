@@ -1,26 +1,3 @@
-let state;
-let lastTimestamp;
-let manX;
-let manY;
-let sceneOffset;
-let score = 0;
-let platforms = [];
-let sticks = [];
-let trees = [];
-let clouds = [];
-
-const config = {
-    canvasWidth: 375,
-    canvasHeight: 375,
-    platformHeight: 100,
-    manDistanceFromEdge: 10,
-    paddingX: 100,
-    perfectAreaSize: 10,
-    backgroundSpeedMultiplier: 0.2,
-    speed: 4,
-    manWidth: 17,
-    manHeight: 30
-};
 const colours = {
     lightBg: "#020321",
     medBg: "#144A0B",
@@ -33,6 +10,20 @@ const colours = {
     skin: "#CF6D60"
 };
 
+const hills = [{
+        baseHeight: 120,
+        amplitude: 30,
+        stretch: 0.5,
+        colour: colours.lightHill
+    },
+    {
+        baseHeight: 50,
+        amplitude: 20,
+        stretch: 0.5,
+        colour: colours.darkHill
+    }
+];
+
 const scoreElement = createElementStyle(
     "div",
     `position:absolute;top:1.5em;font-size:5em;font-weight:900;text-shadow:${addShadow(
@@ -44,7 +35,7 @@ const canvas = createElementStyle("canvas");
 const introductionElement = createElementStyle(
     "div",
     `font-size:1.2em;position:absolute;text-align:center;transition:opacity 2s;width:250px`,
-    "Press and hold anywhere to stretch out a bridge, it has to be the exact length or you will fall down"
+    "Press and hold anywhere to stretch out a bridge, it has to be the exact length or robber will fall down"
 );
 const perfectElement = createElementStyle(
     "div",
@@ -56,7 +47,6 @@ const restartButton = createElementStyle(
     `width:120px;height:120px;position:absolute;border-radius:50%;color:white;background-color:${colours.em};border:none;font-weight:700;font-size:1.2em;display:none;cursor:pointer`,
     "NEW GAME"
 );
-
 // добавление анимации падающего снега
 for (let i = 0; i <= 50; i++) {
     createElementStyle("i", `font-size: ${3 * Math.random()}em;left: ${    100 * Math.random()   }%; animation-delay: ${10 * Math.random()}s, ${2 * Math.random()}s`,
@@ -64,8 +54,8 @@ for (let i = 0; i <= 50; i++) {
     );
 }
 canvas.width = window.innerWidth;
-
 canvas.height = window.innerHeight;
+
 const ctx = canvas.getContext("2d");
 Array.prototype.last = function() {
     return this[this.length - 1];
@@ -114,6 +104,33 @@ restartButton.addEventListener("click", function(event) {
 });
 
 window.requestAnimationFrame(animate);
+
+resetGame();
+
+function resetGame() {
+    state = "waiting";
+    lastTimestamp = undefined;
+    sceneOffset = 0;
+    score = 0;
+    introductionElement.style.opacity = 1;
+    perfectElement.style.opacity = 0;
+    restartButton.style.display = "none";
+    scoreElement.innerText = score;
+    platforms = [{ x: 50, w: 50 }];
+    santaX = platforms[0].x + platforms[0].w - config.santaDistanceFromEdge;
+    santaY = 0;
+    sticks = [{ x: platforms[0].x + platforms[0].w, length: 0, rotation: 0 }];
+    trees = [];
+    clouds = [];
+
+    for (let i = 0; i <= 20; i++) {
+        if (i <= 3) generatePlatform();
+        generateTree();
+        generateCloud();
+    }
+
+    draw();
+}
 
 //3д эффект для счета
 function addShadow(colour, depth) {
