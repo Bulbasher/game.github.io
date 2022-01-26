@@ -58,7 +58,7 @@ const canvas = createElementStyle("canvas");
 const introductionElement = createElementStyle(
     "div",
     `font-size:1.2em;position:absolute;text-align:center;transition:opacity 2s;width:250px`,
-    "Press and hold anywhere to stretch out a bridge, it has to be the exact length or robber will fall down"
+    "Press and hold anywhere to stretch out a bridge, it has to be the exact length or you will fall down"
 );
 const perfectElement = createElementStyle(
     "div",
